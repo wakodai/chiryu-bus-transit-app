@@ -29,13 +29,42 @@ export class ResultPanel {
       card.className = 'result-card';
       card.dataset.index = String(i);
 
-      const totalMin = c.arrivalMin - departureMin;
-      const rideCount = c.legs.filter((l) => l.kind === 'ride').length;
-      const fare = rideCount * 100;
+      const userArrival = c.arrivalMin;
+      const userTotalMin = userArrival - departureMin;
+      const rideLegs = c.legs.filter((l) => l.kind === 'ride');
+      const fare = rideLegs.length * 100;
 
       const head = document.createElement('h3');
-      head.textContent = `${formatMin(departureMin)} → ${formatMin(c.arrivalMin)}（所要 ${totalMin}分・乗換 ${c.transfers}回・運賃 ${fare}円）`;
+      head.textContent = `${formatMin(departureMin)} → ${formatMin(userArrival)}（所要 ${userTotalMin}分・乗換 ${c.transfers}回・運賃 ${fare}円）`;
       card.appendChild(head);
+
+      const firstBoard = rideLegs[0]
+        ? idx.stopById.get(rideLegs[0].fromStopId)
+        : undefined;
+      const lastAlight = rideLegs[rideLegs.length - 1]
+        ? idx.stopById.get(rideLegs[rideLegs.length - 1].toStopId)
+        : undefined;
+
+      if (firstBoard) {
+        const stopRow = document.createElement('div');
+        stopRow.className = 'result-stop';
+        stopRow.textContent = `🚏 出発バス停: ${firstBoard.stop_name}（徒歩${c.originWalkMin}分）`;
+        card.appendChild(stopRow);
+      }
+      if (lastAlight) {
+        const stopRow = document.createElement('div');
+        stopRow.className = 'result-stop';
+        stopRow.textContent = `🚏 到着バス停: ${lastAlight.stop_name}（徒歩${c.destWalkMin}分）`;
+        card.appendChild(stopRow);
+      }
+
+      // Origin walk
+      if (c.originWalkMin > 0 && firstBoard) {
+        const w = document.createElement('div');
+        w.className = 'result-leg';
+        w.textContent = `🚶 ${formatMin(departureMin)} → ${formatMin(departureMin + c.originWalkMin)}（出発地から徒歩${c.originWalkMin}分）`;
+        card.appendChild(w);
+      }
 
       for (const leg of c.legs) {
         const row = document.createElement('div');
@@ -43,12 +72,23 @@ export class ResultPanel {
         if (leg.kind === 'ride') {
           const fromName = idx.stopById.get(leg.fromStopId)?.stop_name ?? leg.fromStopId;
           const toName = idx.stopById.get(leg.toStopId)?.stop_name ?? leg.toStopId;
-          const routeName = leg.route_id ? idx.routeById.get(leg.route_id)?.route_long_name ?? '' : '';
+          const routeName = leg.route_id
+            ? idx.routeById.get(leg.route_id)?.route_long_name ?? ''
+            : '';
           row.textContent = `🚌 ${formatMin(leg.fromMin)} ${fromName} → ${formatMin(leg.toMin)} ${toName}${routeName ? `（${routeName}）` : ''}`;
         } else {
-          row.textContent = `🚶 ${formatMin(leg.fromMin)} → ${formatMin(leg.toMin)}（徒歩 ${leg.toMin - leg.fromMin}分）`;
+          row.textContent = `🚶 ${formatMin(leg.fromMin)} → ${formatMin(leg.toMin)}（徒歩${leg.toMin - leg.fromMin}分）`;
         }
         card.appendChild(row);
+      }
+
+      // Destination walk
+      if (c.destWalkMin > 0 && lastAlight) {
+        const lastRideEnd = rideLegs[rideLegs.length - 1]?.toMin ?? c.arrivalMin;
+        const w = document.createElement('div');
+        w.className = 'result-leg';
+        w.textContent = `🚶 ${formatMin(lastRideEnd)} → ${formatMin(lastRideEnd + c.destWalkMin)}（バス停から徒歩${c.destWalkMin}分）`;
+        card.appendChild(w);
       }
 
       card.addEventListener('click', () => {

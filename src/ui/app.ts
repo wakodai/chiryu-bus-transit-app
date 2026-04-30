@@ -12,7 +12,7 @@ import { ResultPanel } from './result.js';
 const WALK_M_PER_MIN = 80;
 const SEARCH_RADIUS_M = 500;
 const SEARCH_RADIUS_FALLBACK_M = 1000;
-const NEAREST_LIMIT = 3;
+const NEAREST_LIMIT = 5;
 
 type Pin = { lat: number; lon: number; near: NearStop[] };
 
@@ -38,7 +38,16 @@ export async function bootstrap() {
 
   const result = new ResultPanel({
     container: resultContainer,
-    onSelect: (_i, c) => map.drawRoute(c.legs, idx, shapesByShapeId),
+    onSelect: (_i, c) => {
+      if (!origin || !dest) return;
+      map.drawRoute({
+        legs: c.legs,
+        idx,
+        shapesByShapeId,
+        origin: { lat: origin.lat, lon: origin.lon },
+        destination: { lat: dest.lat, lon: dest.lon },
+      });
+    },
   });
 
   const map = new MapView('map', (e) => {
@@ -46,21 +55,19 @@ export async function bootstrap() {
     if (!origin) {
       origin = { lat: e.lat, lon: e.lon, near };
       map.setOrigin(e.lat, e.lon);
-      map.highlightCandidateStops(near.map((n) => n.stop));
       instruction.textContent = '到着地を地図上でクリックしてください';
     } else if (!dest) {
       dest = { lat: e.lat, lon: e.lon, near };
       map.setDestination(e.lat, e.lon);
-      const union = [...origin.near, ...dest.near].map((n) => n.stop);
-      map.highlightCandidateStops(union);
       instruction.textContent = '出発時刻を確認して「検索」を押してください';
       swapBtn.disabled = false;
       searchBtn.disabled = false;
     } else {
+      // Replace destination on subsequent clicks
       dest = { lat: e.lat, lon: e.lon, near };
       map.setDestination(e.lat, e.lon);
-      const union = [...origin.near, ...dest.near].map((n) => n.stop);
-      map.highlightCandidateStops(union);
+      map.clearRoute();
+      result.clear();
     }
   });
 
@@ -68,7 +75,6 @@ export async function bootstrap() {
     origin = null;
     dest = null;
     map.clearPins();
-    map.clearCandidates();
     map.clearRoute();
     result.clear();
     swapBtn.disabled = true;
@@ -80,8 +86,8 @@ export async function bootstrap() {
     if (!origin || !dest) return;
     [origin, dest] = [dest, origin];
     map.swapPins();
-    const union = [...origin.near, ...dest.near].map((n) => n.stop);
-    map.highlightCandidateStops(union);
+    map.clearRoute();
+    result.clear();
   });
 
   searchBtn.addEventListener('click', () => {

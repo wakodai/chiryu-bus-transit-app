@@ -2,7 +2,13 @@ import { describe, expect, it } from 'vitest';
 import type { RouteCandidate } from '../src/routing/raptor.js';
 import { selectTopCandidates } from '../src/routing/select.js';
 
-const mk = (arr: number, tr: number): RouteCandidate => ({ arrivalMin: arr, transfers: tr, legs: [] });
+const mk = (arr: number, tr: number): RouteCandidate => ({
+  arrivalMin: arr,
+  transfers: tr,
+  legs: [],
+  originWalkMin: 0,
+  destWalkMin: 0,
+});
 
 describe('selectTopCandidates', () => {
   it('puts earliest first and includes a direct option when available', () => {
@@ -27,6 +33,6 @@ describe('selectTopCandidates', () => {
   it('handles single Pareto point', () => {
     const front = [mk(600, 1)];
     const out = selectTopCandidates(front);
-    expect(out).toEqual([{ arrivalMin: 600, transfers: 1, legs: [] }]);
+    expect(out).toEqual([{ arrivalMin: 600, transfers: 1, legs: [], originWalkMin: 0, destWalkMin: 0 }]);
   });
 });

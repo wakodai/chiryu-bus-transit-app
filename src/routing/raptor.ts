@@ -21,6 +21,10 @@ export interface RouteCandidate {
   arrivalMin: number;
   transfers: number;
   legs: RouteLeg[];
+  /** Walking minutes from user-clicked origin to the chosen boarding stop. */
+  originWalkMin: number;
+  /** Walking minutes from the chosen alighting stop to user-clicked destination. */
+  destWalkMin: number;
 }
 
 export interface FindRoutesParams {
@@ -150,6 +154,8 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
     if (frontier.size === 0) break;
   }
 
+  const originWalkByStop = new Map(p.originStops.map((o) => [o.stop_id, o.walkMin]));
+
   const candidates: RouteCandidate[] = [];
   for (const d of p.destStops) {
     const arr = labels.get(d.stop_id);
@@ -158,7 +164,16 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
       if (lbl.transfers < 0) continue;
       const arrivalAtUserDest = lbl.arrival + d.walkMin;
       const legs = reconstruct(lbl, d);
-      candidates.push({ arrivalMin: arrivalAtUserDest, transfers: lbl.transfers, legs });
+      const rideLegs = legs.filter((l) => l.kind === 'ride');
+      const firstBoard = rideLegs[0]?.fromStopId;
+      const originWalkMin = firstBoard ? originWalkByStop.get(firstBoard) ?? 0 : 0;
+      candidates.push({
+        arrivalMin: arrivalAtUserDest,
+        transfers: lbl.transfers,
+        legs,
+        originWalkMin,
+        destWalkMin: d.walkMin,
+      });
     }
   }
 
@@ -188,22 +203,12 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
   return pareto;
 }
 
-function reconstruct(finalLabel: Label, destAccess: AccessStop): RouteLeg[] {
+function reconstruct(finalLabel: Label, _destAccess: AccessStop): RouteLeg[] {
   const legs: RouteLeg[] = [];
   let cur: Label | null = finalLabel;
   while (cur && cur.prev) {
     legs.unshift(cur.prev.viaLeg);
     cur = cur.prev.fromLabel;
-  }
-  if (destAccess.walkMin > 0) {
-    const lastRideEnd = legs.length ? legs[legs.length - 1].toMin : finalLabel.arrival;
-    legs.push({
-      kind: 'walk',
-      fromStopId: '',
-      toStopId: '',
-      fromMin: lastRideEnd,
-      toMin: lastRideEnd + destAccess.walkMin,
-    });
   }
   return legs;
 }
