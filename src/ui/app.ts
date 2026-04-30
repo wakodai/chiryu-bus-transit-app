@@ -6,7 +6,7 @@ import { type NearStop, nearestStops } from '../routing/nearest.js';
 import { findRoutes } from '../routing/raptor.js';
 import { selectTopCandidates } from '../routing/select.js';
 import type { ShapePoint } from '../types.js';
-import { parseGtfsTime } from '../util/time.js';
+import { formatMin, parseGtfsTime } from '../util/time.js';
 import { ResultPanel } from './result.js';
 
 const WALK_M_PER_MIN = 80;
@@ -26,6 +26,8 @@ export async function bootstrap() {
   const resetBtn = document.getElementById('reset-btn') as HTMLButtonElement;
   const swapBtn = document.getElementById('swap-btn') as HTMLButtonElement;
   const searchBtn = document.getElementById('search-btn') as HTMLButtonElement;
+  const shiftBackBtn = document.getElementById('shift-back-btn') as HTMLButtonElement;
+  const shiftFwdBtn = document.getElementById('shift-fwd-btn') as HTMLButtonElement;
   const instruction = document.getElementById('instruction') as HTMLElement;
   const resultContainer = document.getElementById('result-panel') as HTMLElement;
 
@@ -62,6 +64,8 @@ export async function bootstrap() {
       instruction.textContent = '出発時刻を確認して「検索」を押してください';
       swapBtn.disabled = false;
       searchBtn.disabled = false;
+      shiftBackBtn.disabled = false;
+      shiftFwdBtn.disabled = false;
     } else {
       // Replace destination on subsequent clicks
       dest = { lat: e.lat, lon: e.lon, near };
@@ -79,6 +83,8 @@ export async function bootstrap() {
     result.clear();
     swapBtn.disabled = true;
     searchBtn.disabled = true;
+    shiftBackBtn.disabled = true;
+    shiftFwdBtn.disabled = true;
     instruction.textContent = '出発地を地図上でクリックしてください';
   });
 
@@ -94,6 +100,17 @@ export async function bootstrap() {
     if (!origin || !dest) return;
     runSearch(origin, dest);
   });
+
+  function shiftAndSearch(deltaMin: number) {
+    if (!origin || !dest) return;
+    const cur = parseGtfsTime(`${timeInput.value}:00`);
+    const wrapped = ((cur + deltaMin) % (24 * 60) + 24 * 60) % (24 * 60);
+    timeInput.value = formatMin(wrapped);
+    runSearch(origin, dest);
+  }
+
+  shiftBackBtn.addEventListener('click', () => shiftAndSearch(-15));
+  shiftFwdBtn.addEventListener('click', () => shiftAndSearch(15));
 
   function pickNearest(idx2: GtfsIndex, lat: number, lon: number): NearStop[] {
     let near = nearestStops(idx2, lat, lon, SEARCH_RADIUS_M, NEAREST_LIMIT);

@@ -1,4 +1,4 @@
-import L, { type LatLngExpression, type Map as LeafletMap, type Marker, type Polyline } from 'leaflet';
+import L, { type LatLngExpression, type Layer, type Map as LeafletMap, type Marker } from 'leaflet';
 import type { GtfsIndex } from '../data/indexer.js';
 import type { RouteLeg } from '../routing/raptor.js';
 import type { ShapePoint, Stop } from '../types.js';
@@ -47,11 +47,56 @@ function makeStopIcon(label: string, bg: string, big = false): L.DivIcon {
   });
 }
 
+/** Compass bearing in degrees (0=north, 90=east) from a→b. */
+function bearingDeg(aLat: number, aLon: number, bLat: number, bLon: number): number {
+  const dy = bLat - aLat;
+  const dx = (bLon - aLon) * Math.cos((aLat * Math.PI) / 180);
+  return (Math.atan2(dx, dy) * 180) / Math.PI;
+}
+
+function makeArrowIcon(angleDeg: number, color: string): L.DivIcon {
+  return L.divIcon({
+    className: 'arrow-icon',
+    html: `<div style="transform:rotate(${angleDeg}deg);font-size:20px;line-height:20px;color:${color};text-shadow:0 0 2px #fff,0 0 4px #fff,0 0 6px #fff;">▲</div>`,
+    iconSize: [20, 20],
+    iconAnchor: [10, 10],
+  });
+}
+
+/** Pick ~3 evenly-spaced points along the polyline by cumulative distance. */
+function pickArrowPositions(
+  coords: [number, number][],
+): { lat: number; lon: number; angle: number }[] {
+  if (coords.length < 2) return [];
+  const cum = [0];
+  for (let i = 1; i < coords.length; i++) {
+    cum.push(cum[i - 1] + haversine(coords[i - 1][0], coords[i - 1][1], coords[i][0], coords[i][1]));
+  }
+  const total = cum[cum.length - 1];
+  if (total === 0) return [];
+  const targets = [0.25, 0.55, 0.85];
+  const out: { lat: number; lon: number; angle: number }[] = [];
+  for (const t of targets) {
+    const target = t * total;
+    let i = 1;
+    while (i < cum.length && cum[i] < target) i++;
+    if (i >= coords.length) i = coords.length - 1;
+    const [aLat, aLon] = coords[i - 1];
+    const [bLat, bLon] = coords[i];
+    const segLen = cum[i] - cum[i - 1];
+    const f = segLen === 0 ? 0 : (target - cum[i - 1]) / segLen;
+    const lat = aLat + (bLat - aLat) * f;
+    const lon = aLon + (bLon - aLon) * f;
+    out.push({ lat, lon, angle: bearingDeg(aLat, aLon, bLat, bLon) });
+  }
+  return out;
+}
+
 export class MapView {
   private map: LeafletMap;
   private originPin: Marker | null = null;
   private destPin: Marker | null = null;
-  private routeLayers: (Polyline | Marker)[] = [];
+  private routeLayers: Layer[] = [];
 
   constructor(elementId: string, onClick: (e: PinClickEvent) => void) {
     this.map = L.map(elementId).setView(CHIRYU_CENTER, 14);
@@ -127,13 +172,11 @@ export class MapView {
       const shape = trip ? shapesByShapeId.get(trip.shape_id) : undefined;
       const fromStop = idx.stopById.get(leg.fromStopId);
       const toStop = idx.stopById.get(leg.toStopId);
-      let coords: LatLngExpression[];
+      let coords: [number, number][];
       if (shape && shape.length && fromStop && toStop) {
         const startI = projectStopOnShape(shape, fromStop.stop_lat, fromStop.stop_lon);
         const endI = projectStopOnShape(shape, toStop.stop_lat, toStop.stop_lon, startI);
-        coords = shape
-          .slice(startI, endI + 1)
-          .map((p) => [p.shape_pt_lat, p.shape_pt_lon] as LatLngExpression);
+        coords = shape.slice(startI, endI + 1).map((p) => [p.shape_pt_lat, p.shape_pt_lon]);
       } else {
         const allStops = idx.stopTimesByTrip.get(leg.trip_id) ?? [];
         const fromIdx = allStops.findIndex((st) => st.stop_id === leg.fromStopId);
@@ -142,12 +185,42 @@ export class MapView {
           .slice(fromIdx, toIdx + 1)
           .map((st) => idx.stopById.get(st.stop_id))
           .filter((s): s is Stop => !!s)
-          .map((s) => [s.stop_lat, s.stop_lon] as LatLngExpression);
+          .map((s) => [s.stop_lat, s.stop_lon]);
       }
       const route = leg.route_id ? idx.routeById.get(leg.route_id) : undefined;
       const color = `#${route?.route_color ?? '1976d2'}`;
-      const poly = L.polyline(coords, { color, weight: 6, opacity: 0.9 }).addTo(this.map);
+      const poly = L.polyline(coords as LatLngExpression[], {
+        color,
+        weight: 6,
+        opacity: 0.9,
+      }).addTo(this.map);
       this.routeLayers.push(poly);
+
+      // Direction arrows along the polyline
+      for (const pos of pickArrowPositions(coords)) {
+        const arr = L.marker([pos.lat, pos.lon], {
+          icon: makeArrowIcon(pos.angle, color),
+          interactive: false,
+          keyboard: false,
+        }).addTo(this.map);
+        this.routeLayers.push(arr);
+      }
+
+      // Intermediate stop markers (stops the bus passes through without alighting)
+      for (const sid of leg.intermediateStopIds ?? []) {
+        const s = idx.stopById.get(sid);
+        if (!s) continue;
+        const cm = L.circleMarker([s.stop_lat, s.stop_lon], {
+          radius: 5,
+          color: '#fff',
+          fillColor: color,
+          fillOpacity: 1,
+          weight: 2,
+        })
+          .addTo(this.map)
+          .bindTooltip(`経由: ${s.stop_name}`);
+        this.routeLayers.push(cm);
+      }
 
       // Transfer point: end of this leg if not last
       if (legIdx < rideLegs.length - 1 && toStop) {
@@ -194,7 +267,7 @@ export class MapView {
     }
 
     // Fit bounds
-    const all: L.Layer[] = [...this.routeLayers];
+    const all: Layer[] = [...this.routeLayers];
     if (this.originPin) all.push(this.originPin);
     if (this.destPin) all.push(this.destPin);
     const group = L.featureGroup(all);
