@@ -66,12 +66,17 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
   const labels = new Map<string, Label[]>();
   let frontier = new Map<string, Label>();
 
+  // Seed the frontier with origin walk-access labels but DO NOT register them in
+  // the main `labels` map. Walk-access labels carry transfers=-1 as a marker
+  // that no ride has been taken yet; if they entered `labels`, their -1
+  // would dominate any ride-completed label at the same stop (e.g., when the
+  // user's destination cluster shares stops with the origin cluster), silently
+  // wiping out the actual bus route.
   for (const o of p.originStops) {
     const arr = p.departureMin + o.walkMin;
-    const label: Label = { arrival: arr, transfers: -1, prev: null };
-    if (pushLabel(labels, o.stop_id, label)) {
-      frontier.set(o.stop_id, label);
-    }
+    const seed: Label = { arrival: arr, transfers: -1, prev: null };
+    const cur = frontier.get(o.stop_id);
+    if (!cur || arr < cur.arrival) frontier.set(o.stop_id, seed);
   }
 
   const transferAdj = new Map<string, { to: string; minMin: number }[]>();

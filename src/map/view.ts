@@ -55,11 +55,14 @@ function bearingDeg(aLat: number, aLon: number, bLat: number, bLon: number): num
 }
 
 function makeArrowIcon(angleDeg: number, color: string): L.DivIcon {
+  // Inline SVG triangle with a dark stroke so light route colors (yellow, pale
+  // orange, lavender) stay legible against OSM tiles regardless of fill.
+  const html = `<svg width="22" height="22" viewBox="0 0 22 22" style="transform:rotate(${angleDeg}deg)" xmlns="http://www.w3.org/2000/svg"><path d="M11 2 L19 19 L11 14 L3 19 Z" fill="${color}" stroke="#1a1a1a" stroke-width="1.5" stroke-linejoin="round"/></svg>`;
   return L.divIcon({
     className: 'arrow-icon',
-    html: `<div style="transform:rotate(${angleDeg}deg);font-size:20px;line-height:20px;color:${color};text-shadow:0 0 2px #fff,0 0 4px #fff,0 0 6px #fff;">▲</div>`,
-    iconSize: [20, 20],
-    iconAnchor: [10, 10],
+    html,
+    iconSize: [22, 22],
+    iconAnchor: [11, 11],
   });
 }
 
@@ -189,10 +192,23 @@ export class MapView {
       }
       const route = leg.route_id ? idx.routeById.get(leg.route_id) : undefined;
       const color = `#${route?.route_color ?? '1976d2'}`;
+      // Dark casing line underneath the colored route line so pale colors
+      // (yellow #FFFF00, lavender #CC99FF, pale orange #FFC000) stay visible
+      // against the OSM tile background.
+      const casing = L.polyline(coords as LatLngExpression[], {
+        color: '#1a1a1a',
+        weight: 9,
+        opacity: 0.85,
+        lineCap: 'round',
+        lineJoin: 'round',
+      }).addTo(this.map);
+      this.routeLayers.push(casing);
       const poly = L.polyline(coords as LatLngExpression[], {
         color,
         weight: 6,
-        opacity: 0.9,
+        opacity: 0.95,
+        lineCap: 'round',
+        lineJoin: 'round',
       }).addTo(this.map);
       this.routeLayers.push(poly);
 

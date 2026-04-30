@@ -10,9 +10,12 @@ import { formatMin, parseGtfsTime } from '../util/time.js';
 import { ResultPanel } from './result.js';
 
 const WALK_M_PER_MIN = 80;
-const SEARCH_RADIUS_M = 500;
-const SEARCH_RADIUS_FALLBACK_M = 1000;
-const NEAREST_LIMIT = 5;
+// Cast a wide net by default so the routing layer is free to pick the most
+// time-efficient stop, not just the geometrically nearest one. The walk-time
+// penalty in RAPTOR keeps clearly-distant stops from winning unfairly.
+const SEARCH_RADIUS_M = 700;
+const SEARCH_RADIUS_FALLBACK_M = 1200;
+const NEAREST_LIMIT = 30;
 
 type Pin = { lat: number; lon: number; near: NearStop[] };
 
@@ -149,6 +152,32 @@ export async function bootstrap() {
     });
     const top = selectTopCandidates(front);
     result.render(top, idx, departureMin);
+  }
+
+  // Test/debug hook (no-op in production); helps E2E tests drive the app at lat/lon precision.
+  if (typeof window !== 'undefined' && location.hostname === 'localhost') {
+    (window as unknown as Record<string, unknown>).__chiryu = {
+      simulateClick: (lat: number, lon: number) => {
+        const near = pickNearest(idx, lat, lon);
+        if (!origin) {
+          origin = { lat, lon, near };
+          map.setOrigin(lat, lon);
+        } else if (!dest) {
+          dest = { lat, lon, near };
+          map.setDestination(lat, lon);
+          swapBtn.disabled = false;
+          searchBtn.disabled = false;
+          shiftBackBtn.disabled = false;
+          shiftFwdBtn.disabled = false;
+        } else {
+          dest = { lat, lon, near };
+          map.setDestination(lat, lon);
+        }
+      },
+      runSearch: () => {
+        if (origin && dest) runSearch(origin, dest);
+      },
+    };
   }
 }
 

@@ -98,4 +98,32 @@ describe('findRoutes (RAPTOR)', () => {
     });
     expect(front).toEqual([]);
   });
+
+  // Regression: when the user-clicked origin and destination clusters share a
+  // stop, the walk-only access label at that shared stop must NOT dominate
+  // ride-completed labels. Otherwise the bus route is silently dropped.
+  it('finds a ride-based path even when origin and dest clusters overlap', () => {
+    const idx = buildFixture();
+    const front = findRoutes(idx, {
+      // Both clusters list every fixture stop, with the destination cluster
+      // putting walk-cost on stops other than X.
+      originStops: [
+        { stop_id: 'A', walkMin: 0 },
+        { stop_id: 'B', walkMin: 5 },
+        { stop_id: 'C', walkMin: 8 },
+        { stop_id: 'X', walkMin: 12 },
+      ],
+      destStops: [
+        { stop_id: 'X', walkMin: 0 },
+        { stop_id: 'B', walkMin: 4 },
+        { stop_id: 'C', walkMin: 7 },
+      ],
+      departureMin: 480,
+      activeServices: new Set(['serviceA']),
+      transfers,
+      maxTransfers: 2,
+    });
+    expect(front.length).toBeGreaterThan(0);
+    expect(front.some((c) => c.legs.some((l) => l.kind === 'ride'))).toBe(true);
+  });
 });
