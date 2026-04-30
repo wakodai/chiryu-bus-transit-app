@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>知立市ミニバス 乗換検索</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="stylesheet" href="/src/style.css" />
+  </head>
+  <body>
+    <div id="app">
+      <div id="map"></div>
+      <aside id="side-panel">
+        <section id="search-panel">
+          <h1>知立市ミニバス 乗換検索</h1>
+          <p class="hint" id="instruction">出発地を地図上でクリックしてください</p>
+          <div class="form-row">
+            <label>出発日 <input type="date" id="search-date" /></label>
+            <label>出発時刻 <input type="time" id="search-time" /></label>
+          </div>
+          <div class="form-row">
+            <button id="reset-btn" type="button">リセット</button>
+            <button id="swap-btn" type="button" disabled>出発⇄到着 入替</button>
+            <button id="search-btn" type="button" disabled>検索</button>
+          </div>
+        </section>
+        <section id="result-panel"></section>
+        <footer>
+          <small>
+            データ提供：知立市「ミニバス」GTFS-JP
+            <a href="https://creativecommons.org/licenses/by/2.1/jp/" target="_blank" rel="noopener">CC BY 2.1 JP</a>
+            ／ 地図：© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors
+          </small>
+        </footer>
+      </aside>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
