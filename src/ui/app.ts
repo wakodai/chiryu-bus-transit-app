@@ -87,13 +87,10 @@ export async function bootstrap() {
       searchBtn.disabled = false;
       shiftBackBtn.disabled = false;
       shiftFwdBtn.disabled = false;
-    } else {
-      // Replace destination on subsequent clicks
-      dest = { lat: e.lat, lon: e.lon, near };
-      map.setDestination(e.lat, e.lon);
-      map.clearRoute();
-      result.clear();
     }
+    // 出発地・到着地が両方確定済みのときは追加クリックを無視する。
+    // 誤って地図をクリックしても検索結果が消えないように、再設定は
+    // リセットボタン経由のみとする。
   }
 
   resetBtn.addEventListener('click', () => {
