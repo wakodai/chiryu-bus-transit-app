@@ -1,3 +1,4 @@
+import { WALK_M_PER_MIN } from '../data/foot-transfers.js';
 import { buildIndex, type GtfsIndex } from '../data/indexer.js';
 import { loadGtfs } from '../data/loader.js';
 import { MapView } from '../map/view.js';
@@ -8,8 +9,6 @@ import { selectTopCandidates, type SortKey } from '../routing/select.js';
 import type { ShapePoint } from '../types.js';
 import { formatMin, parseGtfsTime } from '../util/time.js';
 import { ResultPanel } from './result.js';
-
-const WALK_M_PER_MIN = 80;
 // Cast a wide net by default so the routing layer is free to pick the most
 // time-efficient stop, not just the geometrically nearest one. The walk-time
 // penalty in RAPTOR keeps clearly-distant stops from winning unfairly.
@@ -182,8 +181,9 @@ export async function bootstrap() {
       })),
       departureMin,
       activeServices: services,
-      transfers: data.transfers,
+      transfers: idx.footTransfers,
       maxTransfers: 2,
+      transferBufferMin: 1,
     });
     lastFront = front;
     lastDepartureMin = departureMin;
