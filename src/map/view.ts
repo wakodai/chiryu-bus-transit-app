@@ -5,7 +5,7 @@ import type { ShapePoint, Stop } from '../types.js';
 import { haversine } from '../util/distance.js';
 import { rideLegShapeCoords } from '../util/shape.js';
 
-const CHIRYU_CENTER: LatLngExpression = [35.0102, 137.0494];
+const CHIRYU_CENTER: LatLngExpression = [35.0017, 137.0489];
 
 export interface PinClickEvent {
   lat: number;
@@ -92,12 +92,39 @@ export class MapView {
 
   constructor(elementId: string, onClick: (e: PinClickEvent) => void) {
     this.map = L.map(elementId).setView(CHIRYU_CENTER, 14);
-    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
-      attribution:
-        '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+
+    const cartoAttribution =
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>';
+    const osmAttribution =
+      '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors';
+
+    const positron = L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: cartoAttribution,
       subdomains: 'abcd',
       maxZoom: 19,
-    }).addTo(this.map);
+    });
+    const voyager = L.tileLayer(
+      'https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',
+      { attribution: cartoAttribution, subdomains: 'abcd', maxZoom: 19 },
+    );
+    const osm = L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      attribution: osmAttribution,
+      maxZoom: 19,
+    });
+
+    positron.addTo(this.map);
+    L.control
+      .layers(
+        {
+          Positron: positron,
+          Voyager: voyager,
+          OpenStreetMap: osm,
+        },
+        undefined,
+        { position: 'topright', collapsed: true },
+      )
+      .addTo(this.map);
+
     this.map.on('click', (e) => onClick({ lat: e.latlng.lat, lon: e.latlng.lng }));
   }
 
