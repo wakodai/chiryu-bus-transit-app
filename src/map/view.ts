@@ -330,7 +330,7 @@ export class MapView {
       if (!shape || shape.length < 2) continue;
       L.polyline(
         shape.map((p) => [p.shape_pt_lat, p.shape_pt_lon] as LatLngExpression),
-        { color, weight: 3, opacity: 0.35, interactive: false },
+        { color, weight: 2, opacity: 0.9, interactive: false },
       ).addTo(group);
     }
     for (const stop of idx.stopById.values()) {
