@@ -78,7 +78,7 @@ export async function bootstrap() {
     if (!origin) {
       origin = { lat: e.lat, lon: e.lon, near };
       map.setOrigin(e.lat, e.lon);
-      instruction.textContent = '到着地を地図上でクリックしてください';
+      instruction.innerHTML = '<span class="dest-text">到着地</span>を地図上でクリックしてください';
     } else if (!dest) {
       dest = { lat: e.lat, lon: e.lon, near };
       map.setDestination(e.lat, e.lon);
@@ -103,7 +103,7 @@ export async function bootstrap() {
     searchBtn.disabled = true;
     shiftBackBtn.disabled = true;
     shiftFwdBtn.disabled = true;
-    instruction.textContent = '出発地を地図上でクリックしてください';
+    instruction.innerHTML = '<span class="origin-text">出発地</span>を地図上でクリックしてください';
   });
 
   swapBtn.addEventListener('click', () => {
