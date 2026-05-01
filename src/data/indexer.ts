@@ -1,5 +1,6 @@
 import RBush from 'rbush';
-import type { GtfsData, Route, Stop, StopTime, Trip } from '../types.js';
+import type { GtfsData, Route, Stop, StopTime, Transfer, Trip } from '../types.js';
+import { FOOT_TRANSFER_MAX_M, WALK_M_PER_MIN, synthesizeFootTransfers } from './foot-transfers.js';
 
 export interface StopBoxItem {
   minX: number;
@@ -22,6 +23,7 @@ export interface GtfsIndex {
   routeById: Map<string, Route>;
   departuresByStop: Map<string, DepartureEntry[]>;
   stopTimesByTrip: Map<string, StopTime[]>;
+  footTransfers: Transfer[];
 }
 
 export function buildIndex(data: GtfsData): GtfsIndex {
@@ -69,5 +71,15 @@ export function buildIndex(data: GtfsData): GtfsIndex {
     arr.sort((a, b) => a.departure_min - b.departure_min);
   }
 
-  return { stopTree, stopById, tripById, routeById, departuresByStop, stopTimesByTrip };
+  const footTransfers = synthesizeFootTransfers(data.stops, FOOT_TRANSFER_MAX_M, WALK_M_PER_MIN);
+
+  return {
+    stopTree,
+    stopById,
+    tripById,
+    routeById,
+    departuresByStop,
+    stopTimesByTrip,
+    footTransfers,
+  };
 }

@@ -22,6 +22,7 @@ function fakeIndex(stops: Stop[]): GtfsIndex {
     routeById: new Map(),
     departuresByStop: new Map(),
     stopTimesByTrip: new Map(),
+    footTransfers: [],
   };
 }
 

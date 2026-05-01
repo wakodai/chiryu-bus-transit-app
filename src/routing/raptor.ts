@@ -44,6 +44,12 @@ export interface FindRoutesParams {
   activeServices: Set<string>;
   transfers: Transfer[];
   maxTransfers: number;
+  /**
+   * 乗換時に加算する分数。前レグが ride（label.transfers >= 0）の状態から
+   * 次の bus に乗車する判定で `dep.departure_min >= label.arrival + transferBufferMin`
+   * を要求する。出発地からの初回乗車（seed: transfers === -1）には適用しない。
+   */
+  transferBufferMin: number;
 }
 
 interface Label {
@@ -105,8 +111,12 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
 
     for (const [stopId, label] of frontier) {
       const deps = idx.departuresByStop.get(stopId) ?? [];
+      // 出発地からの初回乗車（seed: transfers === -1）にはバッファを適用しない。
+      // 既に ride 完了している label からの再乗車にのみ +transferBufferMin を要求する。
+      const minBoardMin =
+        label.transfers >= 0 ? label.arrival + p.transferBufferMin : label.arrival;
       for (const dep of deps) {
-        if (dep.departure_min < label.arrival) continue;
+        if (dep.departure_min < minBoardMin) continue;
         const trip = idx.tripById.get(dep.trip_id);
         if (!trip || !p.activeServices.has(trip.service_id)) continue;
         const sts = idx.stopTimesByTrip.get(dep.trip_id);
