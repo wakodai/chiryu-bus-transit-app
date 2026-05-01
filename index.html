@@ -17,6 +17,7 @@
           <div class="form-row">
             <label>出発日 <input type="date" id="search-date" /></label>
             <label>出発時刻 <input type="time" id="search-time" /></label>
+            <button id="now-btn" type="button" title="現在日時に合わせる">今</button>
           </div>
           <div class="form-row">
             <button id="shift-back-btn" type="button" disabled>−15分</button>
@@ -31,6 +32,9 @@
             <span class="sort-label">並び順:</span>
             <label><input type="radio" name="sort" value="earliest" checked /> 所要時間最小</label>
             <label><input type="radio" name="sort" value="leastWalk" /> 徒歩時間最小</label>
+          </div>
+          <div class="form-row sort-row">
+            <label><input type="checkbox" id="show-network" checked /> バス停・全路線を薄く表示</label>
           </div>
         </section>
         <section id="result-panel"></section>

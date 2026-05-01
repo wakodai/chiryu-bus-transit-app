@@ -10,6 +10,7 @@ html, body { margin: 0; padding: 0; height: 100%; font-family: -apple-system, "H
 .sort-row { font-size: 0.85rem; }
 .sort-row label { flex-direction: row; align-items: center; gap: 2px; cursor: pointer; }
 .sort-label { color: #555; }
+#now-btn { padding: 4px 10px; font-size: 0.85rem; align-self: flex-end; height: fit-content; }
 button { padding: 6px 12px; cursor: pointer; }
 button:disabled { opacity: 0.5; cursor: not-allowed; }
 .result-card { border: 1px solid #ccc; border-radius: 6px; padding: 8px; margin-bottom: 8px; background: #fff; cursor: pointer; }

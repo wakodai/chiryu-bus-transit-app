@@ -104,6 +104,8 @@ export class MapView {
   private intermediateMarkers = new Map<string, L.CircleMarker>();
   /** Transient highlight overlay; replaced on each highlightStop call. */
   private highlightLayer: L.CircleMarker | null = null;
+  /** Network coverage overlay (all stops + all route shapes), togglable. */
+  private networkLayer: L.LayerGroup | null = null;
 
   constructor(elementId: string, onClick: (e: PinClickEvent) => void) {
     this.map = L.map(elementId).setView(CHIRYU_CENTER, 14);
@@ -308,6 +310,58 @@ export class MapView {
       this.map.removeLayer(this.highlightLayer);
       this.highlightLayer = null;
     }
+  }
+
+  /**
+   * Draw a translucent network of every bus stop and every route shape so the
+   * user can see where the service operates before clicking. Non-interactive
+   * so map clicks pass through to the pin-placement handler.
+   */
+  setNetworkOverlay(
+    idx: GtfsIndex,
+    shapesByShapeId: Map<string, ShapePoint[]>,
+    visible: boolean,
+  ) {
+    if (this.networkLayer) {
+      this.map.removeLayer(this.networkLayer);
+      this.networkLayer = null;
+    }
+    if (!visible) return;
+    const group = L.layerGroup();
+    // One polyline per unique shape, colored by its route's route_color.
+    const shapeIdToColor = new Map<string, string>();
+    for (const trip of idx.tripById.values()) {
+      if (shapeIdToColor.has(trip.shape_id)) continue;
+      const route = idx.routeById.get(trip.route_id);
+      if (route) shapeIdToColor.set(trip.shape_id, `#${route.route_color}`);
+    }
+    for (const [shapeId, color] of shapeIdToColor) {
+      const shape = shapesByShapeId.get(shapeId);
+      if (!shape || shape.length < 2) continue;
+      L.polyline(
+        shape.map((p) => [p.shape_pt_lat, p.shape_pt_lon] as LatLngExpression),
+        { color, weight: 3, opacity: 0.35, interactive: false },
+      ).addTo(group);
+    }
+    for (const stop of idx.stopById.values()) {
+      L.circleMarker([stop.stop_lat, stop.stop_lon], {
+        radius: 3,
+        color: '#444',
+        weight: 1,
+        fillColor: '#fff',
+        fillOpacity: 0.9,
+        opacity: 0.6,
+        interactive: false,
+      }).addTo(group);
+    }
+    group.addTo(this.map);
+    // Send the network overlay to the back so selected-route lines and pins draw on top.
+    group.eachLayer((l) => {
+      if ('bringToBack' in l && typeof (l as L.Path).bringToBack === 'function') {
+        (l as L.Path).bringToBack();
+      }
+    });
+    this.networkLayer = group;
   }
 
   /** Pan to and pulse-highlight an intermediate stop by stop_id. */

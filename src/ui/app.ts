@@ -31,12 +31,21 @@ export async function bootstrap() {
   const searchBtn = document.getElementById('search-btn') as HTMLButtonElement;
   const shiftBackBtn = document.getElementById('shift-back-btn') as HTMLButtonElement;
   const shiftFwdBtn = document.getElementById('shift-fwd-btn') as HTMLButtonElement;
+  const nowBtn = document.getElementById('now-btn') as HTMLButtonElement;
+  const showNetworkInput = document.getElementById('show-network') as HTMLInputElement;
   const instruction = document.getElementById('instruction') as HTMLElement;
   const resultContainer = document.getElementById('result-panel') as HTMLElement;
 
-  const now = new Date();
-  dateInput.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
-  timeInput.value = `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  function setDateTimeToNow() {
+    const n = new Date();
+    dateInput.value = `${n.getFullYear()}-${String(n.getMonth() + 1).padStart(2, '0')}-${String(n.getDate()).padStart(2, '0')}`;
+    timeInput.value = `${String(n.getHours()).padStart(2, '0')}:${String(n.getMinutes()).padStart(2, '0')}`;
+  }
+  setDateTimeToNow();
+  nowBtn.addEventListener('click', () => {
+    setDateTimeToNow();
+    if (origin && dest) runSearch(origin, dest);
+  });
 
   let origin: Pin | null = null;
   let dest: Pin | null = null;
@@ -58,7 +67,14 @@ export async function bootstrap() {
     onStopClick: (stopId) => map.highlightStop(stopId),
   });
 
-  const map = new MapView('map', (e) => {
+  // Initial network overlay so users can see where the service runs.
+  const map = new MapView('map', (_e) => placePin(_e));
+  map.setNetworkOverlay(idx, shapesByShapeId, showNetworkInput.checked);
+  showNetworkInput.addEventListener('change', () => {
+    map.setNetworkOverlay(idx, shapesByShapeId, showNetworkInput.checked);
+  });
+
+  function placePin(e: { lat: number; lon: number }) {
     const near = pickNearest(idx, e.lat, e.lon);
     if (!origin) {
       origin = { lat: e.lat, lon: e.lon, near };
@@ -79,7 +95,7 @@ export async function bootstrap() {
       map.clearRoute();
       result.clear();
     }
-  });
+  }
 
   resetBtn.addEventListener('click', () => {
     origin = null;
