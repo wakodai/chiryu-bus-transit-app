@@ -109,7 +109,9 @@ export class ResultPanel {
             card.appendChild(det);
           }
         } else {
-          row.textContent = `🚶 ${formatMin(leg.fromMin)} → ${formatMin(leg.toMin)}（徒歩${leg.toMin - leg.fromMin}分）`;
+          const fromName = idx.stopById.get(leg.fromStopId)?.stop_name ?? leg.fromStopId;
+          const toName = idx.stopById.get(leg.toStopId)?.stop_name ?? leg.toStopId;
+          row.textContent = `🚶 ${formatMin(leg.fromMin)} ${fromName} → ${formatMin(leg.toMin)} ${toName}（徒歩${leg.toMin - leg.fromMin}分）`;
           card.appendChild(row);
         }
       }
