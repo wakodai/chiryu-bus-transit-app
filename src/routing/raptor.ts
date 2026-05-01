@@ -15,6 +15,14 @@ export interface RouteLeg {
   trip_id?: string;
   route_id?: string;
   intermediateStopIds?: string[];
+  /**
+   * 0-based index of the boarding stop within `idx.stopTimesByTrip[trip_id]`.
+   * Disambiguates trips that revisit the same stop_id (e.g. the 5コース loop
+   * where 500_01 and 600_01 each appear twice). Only set for `kind === 'ride'`.
+   */
+  fromSeqIdx?: number;
+  /** 0-based index of the alighting stop within stopTimesByTrip[trip_id]. */
+  toSeqIdx?: number;
 }
 
 export interface RouteCandidate {
@@ -103,9 +111,11 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
         if (!trip || !p.activeServices.has(trip.service_id)) continue;
         const sts = idx.stopTimesByTrip.get(dep.trip_id);
         if (!sts) continue;
+        const depIdx = sts.findIndex((s) => s.stop_sequence === dep.stop_sequence);
+        if (depIdx < 0) continue;
         const intermediate: string[] = [];
-        for (const st of sts) {
-          if (st.stop_sequence <= dep.stop_sequence) continue;
+        for (let i = depIdx + 1; i < sts.length; i++) {
+          const st = sts[i];
           const newLabel: Label = {
             arrival: st.arrival_min,
             transfers: label.transfers + 1,
@@ -119,6 +129,8 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
                 toMin: st.arrival_min,
                 trip_id: dep.trip_id,
                 route_id: trip.route_id,
+                fromSeqIdx: depIdx,
+                toSeqIdx: i,
                 intermediateStopIds: [...intermediate],
               },
             },

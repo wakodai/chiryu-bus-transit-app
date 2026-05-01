@@ -3,6 +3,7 @@ import type { GtfsIndex } from '../data/indexer.js';
 import type { RouteLeg } from '../routing/raptor.js';
 import type { ShapePoint, Stop } from '../types.js';
 import { haversine } from '../util/distance.js';
+import { rideLegShapeCoords } from '../util/shape.js';
 
 const CHIRYU_CENTER: LatLngExpression = [35.0102, 137.0494];
 
@@ -17,24 +18,6 @@ export interface DrawRouteOptions {
   shapesByShapeId: Map<string, ShapePoint[]>;
   origin: { lat: number; lon: number };
   destination: { lat: number; lon: number };
-}
-
-function projectStopOnShape(
-  shape: ShapePoint[],
-  lat: number,
-  lon: number,
-  startIdx = 0,
-): number {
-  let bestIdx = startIdx;
-  let bestDist = Infinity;
-  for (let i = startIdx; i < shape.length; i++) {
-    const d = haversine(lat, lon, shape[i].shape_pt_lat, shape[i].shape_pt_lon);
-    if (d < bestDist) {
-      bestDist = d;
-      bestIdx = i;
-    }
-  }
-  return bestIdx;
 }
 
 function makeStopIcon(label: string, bg: string, big = false): L.DivIcon {
@@ -186,21 +169,26 @@ export class MapView {
       const shape = trip ? shapesByShapeId.get(trip.shape_id) : undefined;
       const fromStop = idx.stopById.get(leg.fromStopId);
       const toStop = idx.stopById.get(leg.toStopId);
-      let coords: [number, number][];
-      if (shape && shape.length && fromStop && toStop) {
-        const startI = projectStopOnShape(shape, fromStop.stop_lat, fromStop.stop_lon);
-        const endI = projectStopOnShape(shape, toStop.stop_lat, toStop.stop_lon, startI);
-        coords = shape.slice(startI, endI + 1).map((p) => [p.shape_pt_lat, p.shape_pt_lon]);
-      } else {
-        const allStops = idx.stopTimesByTrip.get(leg.trip_id) ?? [];
-        const fromIdx = allStops.findIndex((st) => st.stop_id === leg.fromStopId);
-        const toIdx = allStops.findIndex((st) => st.stop_id === leg.toStopId);
-        coords = allStops
-          .slice(fromIdx, toIdx + 1)
-          .map((st) => idx.stopById.get(st.stop_id))
-          .filter((s): s is Stop => !!s)
-          .map((s) => [s.stop_lat, s.stop_lon]);
-      }
+      const allStops = idx.stopTimesByTrip.get(leg.trip_id) ?? [];
+      // Prefer the boarding/alighting indices RAPTOR recorded so we slice the
+      // correct loop pass when a trip revisits a stop_id; only fall back to
+      // findIndex for legs produced before this field was added.
+      const fromSeqIdx =
+        leg.fromSeqIdx ?? allStops.findIndex((st) => st.stop_id === leg.fromStopId);
+      const toSeqIdx =
+        leg.toSeqIdx ?? allStops.findIndex((st) => st.stop_id === leg.toStopId);
+      const tripStops = allStops
+        .map((st) => idx.stopById.get(st.stop_id))
+        .filter((s): s is Stop => !!s);
+      const coords = rideLegShapeCoords({
+        shape,
+        fromStop,
+        toStop,
+        fromSeqIdx,
+        toSeqIdx,
+        totalStops: allStops.length,
+        tripStops,
+      });
       const route = leg.route_id ? idx.routeById.get(leg.route_id) : undefined;
       const color = `#${route?.route_color ?? '1976d2'}`;
       // Dark casing line underneath the colored route line so pale colors
