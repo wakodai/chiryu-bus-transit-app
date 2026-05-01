@@ -20,7 +20,7 @@ async function loadJson<T>(path: string): Promise<T> {
 
 const yes = (v: string) => v === '1';
 
-export async function loadGtfs(base = '/gtfs'): Promise<GtfsData> {
+export async function loadGtfs(base = `${import.meta.env.BASE_URL}gtfs`): Promise<GtfsData> {
   const [
     stopsRaw,
     routesRaw,
