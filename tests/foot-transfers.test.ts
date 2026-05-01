@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import type { Stop } from '../src/types.js';
+import { buildIndex } from '../src/data/indexer.js';
+import type { GtfsData, Stop } from '../src/types.js';
 import {
   FOOT_TRANSFER_MAX_M,
   WALK_M_PER_MIN,
@@ -47,5 +48,36 @@ describe('synthesizeFootTransfers', () => {
   it('exposes the threshold and walk speed constants', () => {
     expect(FOOT_TRANSFER_MAX_M).toBe(350);
     expect(WALK_M_PER_MIN).toBe(80);
+  });
+});
+
+function emptyGtfsData(): GtfsData {
+  return {
+    stops: [
+      { stop_id: 'A', stop_name: 'A', stop_lat: 35, stop_lon: 0 },
+      { stop_id: 'B', stop_name: 'B', stop_lat: 35, stop_lon: ONE_HUNDRED_M_LON },
+    ],
+    routes: [],
+    trips: [],
+    stopTimes: [],
+    calendar: [],
+    calendarDates: [],
+    transfers: [],
+    shapes: [],
+    feedInfo: {
+      feed_publisher_name: '',
+      feed_publisher_url: '',
+      feed_lang: '',
+      feed_start_date: '',
+      feed_end_date: '',
+      feed_version: '',
+    },
+  };
+}
+
+describe('buildIndex foot transfer wiring', () => {
+  it('exposes synthesized footTransfers on the index', () => {
+    const idx = buildIndex(emptyGtfsData());
+    expect(idx.footTransfers.length).toBe(2);
   });
 });

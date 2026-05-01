@@ -66,6 +66,7 @@ function buildFixture(): GtfsIndex {
     routeById: new Map(),
     departuresByStop,
     stopTimesByTrip,
+    footTransfers: [],
   };
 }
 
@@ -105,6 +106,7 @@ function buildFixtureFrom(stopList: Stop[], tripList: Trip[], stList: StopTime[]
     routeById: new Map(),
     departuresByStop,
     stopTimesByTrip,
+    footTransfers: [],
   };
 }
 
