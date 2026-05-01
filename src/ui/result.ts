@@ -5,6 +5,7 @@ import { formatMin } from '../util/time.js';
 export interface ResultPanelOptions {
   container: HTMLElement;
   onSelect: (index: number, candidate: RouteCandidate) => void;
+  onStopClick: (stopId: string) => void;
 }
 
 export class ResultPanel {
@@ -76,10 +77,41 @@ export class ResultPanel {
             ? idx.routeById.get(leg.route_id)?.route_long_name ?? ''
             : '';
           row.textContent = `🚌 ${formatMin(leg.fromMin)} ${fromName} → ${formatMin(leg.toMin)} ${toName}${routeName ? `（${routeName}）` : ''}`;
+          card.appendChild(row);
+
+          // Collapsible list of intermediate stops for this ride leg.
+          const intermediateIds = leg.intermediateStopIds ?? [];
+          if (intermediateIds.length > 0) {
+            const det = document.createElement('details');
+            det.className = 'via-stops';
+            const sum = document.createElement('summary');
+            sum.textContent = `経由バス停（${intermediateIds.length}停留所）`;
+            det.appendChild(sum);
+            const list = document.createElement('ul');
+            for (const sid of intermediateIds) {
+              const s = idx.stopById.get(sid);
+              if (!s) continue;
+              const li = document.createElement('li');
+              const a = document.createElement('a');
+              a.className = 'via-stop-link';
+              a.href = '#';
+              a.textContent = s.stop_name;
+              a.dataset.stopId = sid;
+              a.addEventListener('click', (ev) => {
+                ev.preventDefault();
+                ev.stopPropagation();
+                this.opts.onStopClick(sid);
+              });
+              li.appendChild(a);
+              list.appendChild(li);
+            }
+            det.appendChild(list);
+            card.appendChild(det);
+          }
         } else {
           row.textContent = `🚶 ${formatMin(leg.fromMin)} → ${formatMin(leg.toMin)}（徒歩${leg.toMin - leg.fromMin}分）`;
+          card.appendChild(row);
         }
-        card.appendChild(row);
       }
 
       // Destination walk

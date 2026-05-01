@@ -23,9 +23,14 @@
             <button id="shift-fwd-btn" type="button" disabled>＋15分</button>
           </div>
           <div class="form-row">
-            <button id="reset-btn" type="button">リセット</button>
-            <button id="swap-btn" type="button" disabled>出発⇄到着 入替</button>
             <button id="search-btn" type="button" disabled>検索</button>
+            <button id="swap-btn" type="button" disabled>出発⇄到着 入替</button>
+            <button id="reset-btn" type="button">リセット</button>
+          </div>
+          <div class="form-row sort-row">
+            <span class="sort-label">並び順:</span>
+            <label><input type="radio" name="sort" value="earliest" checked /> 所要時間最小</label>
+            <label><input type="radio" name="sort" value="leastWalk" /> 徒歩時間最小</label>
           </div>
         </section>
         <section id="result-panel"></section>

@@ -100,6 +100,10 @@ export class MapView {
   private originPin: Marker | null = null;
   private destPin: Marker | null = null;
   private routeLayers: Layer[] = [];
+  /** Lookup of intermediate-stop circle markers by stop_id, used by highlightStop. */
+  private intermediateMarkers = new Map<string, L.CircleMarker>();
+  /** Transient highlight overlay; replaced on each highlightStop call. */
+  private highlightLayer: L.CircleMarker | null = null;
 
   constructor(elementId: string, onClick: (e: PinClickEvent) => void) {
     this.map = L.map(elementId).setView(CHIRYU_CENTER, 14);
@@ -148,6 +152,11 @@ export class MapView {
   drawRoute(opts: DrawRouteOptions) {
     for (const l of this.routeLayers) this.map.removeLayer(l);
     this.routeLayers = [];
+    this.intermediateMarkers.clear();
+    if (this.highlightLayer) {
+      this.map.removeLayer(this.highlightLayer);
+      this.highlightLayer = null;
+    }
 
     const { legs, idx, shapesByShapeId, origin, destination } = opts;
     const rideLegs = legs.filter((l) => l.kind === 'ride');
@@ -236,6 +245,7 @@ export class MapView {
           .addTo(this.map)
           .bindTooltip(`経由: ${s.stop_name}`);
         this.routeLayers.push(cm);
+        this.intermediateMarkers.set(sid, cm);
       }
 
       // Transfer point: end of this leg if not last
@@ -293,5 +303,30 @@ export class MapView {
   clearRoute() {
     for (const l of this.routeLayers) this.map.removeLayer(l);
     this.routeLayers = [];
+    this.intermediateMarkers.clear();
+    if (this.highlightLayer) {
+      this.map.removeLayer(this.highlightLayer);
+      this.highlightLayer = null;
+    }
+  }
+
+  /** Pan to and pulse-highlight an intermediate stop by stop_id. */
+  highlightStop(stopId: string) {
+    const m = this.intermediateMarkers.get(stopId);
+    if (!m) return;
+    if (this.highlightLayer) {
+      this.map.removeLayer(this.highlightLayer);
+      this.highlightLayer = null;
+    }
+    const ll = m.getLatLng();
+    this.highlightLayer = L.circleMarker(ll, {
+      radius: 14,
+      color: '#ff6f00',
+      weight: 4,
+      fillColor: '#fff59d',
+      fillOpacity: 0.6,
+    }).addTo(this.map);
+    this.map.panTo(ll);
+    m.openTooltip();
   }
 }

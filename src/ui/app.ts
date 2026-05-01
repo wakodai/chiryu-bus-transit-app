@@ -3,8 +3,8 @@ import { loadGtfs } from '../data/loader.js';
 import { MapView } from '../map/view.js';
 import { activeServiceIds } from '../routing/calendar.js';
 import { type NearStop, nearestStops } from '../routing/nearest.js';
-import { findRoutes } from '../routing/raptor.js';
-import { selectTopCandidates } from '../routing/select.js';
+import { findRoutes, type RouteCandidate } from '../routing/raptor.js';
+import { selectTopCandidates, type SortKey } from '../routing/select.js';
 import type { ShapePoint } from '../types.js';
 import { formatMin, parseGtfsTime } from '../util/time.js';
 import { ResultPanel } from './result.js';
@@ -40,6 +40,8 @@ export async function bootstrap() {
 
   let origin: Pin | null = null;
   let dest: Pin | null = null;
+  let lastFront: RouteCandidate[] = [];
+  let lastDepartureMin = 0;
 
   const result = new ResultPanel({
     container: resultContainer,
@@ -53,6 +55,7 @@ export async function bootstrap() {
         destination: { lat: dest.lat, lon: dest.lon },
       });
     },
+    onStopClick: (stopId) => map.highlightStop(stopId),
   });
 
   const map = new MapView('map', (e) => {
@@ -115,6 +118,20 @@ export async function bootstrap() {
   shiftBackBtn.addEventListener('click', () => shiftAndSearch(-15));
   shiftFwdBtn.addEventListener('click', () => shiftAndSearch(15));
 
+  function currentSort(): SortKey {
+    const checked = document.querySelector(
+      'input[name="sort"]:checked',
+    ) as HTMLInputElement | null;
+    return (checked?.value as SortKey) ?? 'earliest';
+  }
+  for (const radio of document.querySelectorAll<HTMLInputElement>('input[name="sort"]')) {
+    radio.addEventListener('change', () => {
+      if (lastFront.length > 0) {
+        result.render(selectTopCandidates(lastFront, currentSort()), idx, lastDepartureMin);
+      }
+    });
+  }
+
   function pickNearest(idx2: GtfsIndex, lat: number, lon: number): NearStop[] {
     let near = nearestStops(idx2, lat, lon, SEARCH_RADIUS_M, NEAREST_LIMIT);
     if (near.length === 0) {
@@ -133,6 +150,8 @@ export async function bootstrap() {
     const departureMin = parseGtfsTime(`${timeInput.value}:00`);
     const services = activeServiceIds(date, data.calendar, data.calendarDates);
     if (services.size === 0) {
+      lastFront = [];
+      lastDepartureMin = departureMin;
       result.render([], idx, departureMin);
       return;
     }
@@ -150,8 +169,9 @@ export async function bootstrap() {
       transfers: data.transfers,
       maxTransfers: 2,
     });
-    const top = selectTopCandidates(front);
-    result.render(top, idx, departureMin);
+    lastFront = front;
+    lastDepartureMin = departureMin;
+    result.render(selectTopCandidates(front, currentSort()), idx, departureMin);
   }
 
   // Test/debug hook (no-op in production); helps E2E tests drive the app at lat/lon precision.

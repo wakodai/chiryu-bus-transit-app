@@ -25,6 +25,8 @@ export interface RouteCandidate {
   originWalkMin: number;
   /** Walking minutes from the chosen alighting stop to user-clicked destination. */
   destWalkMin: number;
+  /** Sum of all walking minutes (origin walk + transfer walks + dest walk). */
+  walkTotalMin: number;
 }
 
 export interface FindRoutesParams {
@@ -172,36 +174,37 @@ export function findRoutes(idx: GtfsIndex, p: FindRoutesParams): RouteCandidate[
       const rideLegs = legs.filter((l) => l.kind === 'ride');
       const firstBoard = rideLegs[0]?.fromStopId;
       const originWalkMin = firstBoard ? originWalkByStop.get(firstBoard) ?? 0 : 0;
+      const transferWalkMin = legs
+        .filter((l) => l.kind === 'walk')
+        .reduce((sum, l) => sum + (l.toMin - l.fromMin), 0);
+      const walkTotalMin = originWalkMin + d.walkMin + transferWalkMin;
       candidates.push({
         arrivalMin: arrivalAtUserDest,
         transfers: lbl.transfers,
         legs,
         originWalkMin,
         destWalkMin: d.walkMin,
+        walkTotalMin,
       });
     }
   }
 
+  // Pareto over (arrivalMin, walkTotalMin) so both "fastest total trip" and
+  // "least walking" perspectives are represented in the survivor set. Tie-break
+  // by transfers so we never keep a strictly-worse-on-transfers candidate at
+  // the same (arrival, walk).
   const pareto: RouteCandidate[] = [];
+  const dom = (a: RouteCandidate, b: RouteCandidate) =>
+    a.arrivalMin <= b.arrivalMin &&
+    a.walkTotalMin <= b.walkTotalMin &&
+    a.transfers <= b.transfers &&
+    (a.arrivalMin < b.arrivalMin ||
+      a.walkTotalMin < b.walkTotalMin ||
+      a.transfers < b.transfers);
   for (const c of candidates) {
-    if (
-      pareto.some(
-        (x) =>
-          x.arrivalMin <= c.arrivalMin &&
-          x.transfers <= c.transfers &&
-          (x.arrivalMin < c.arrivalMin || x.transfers < c.transfers),
-      )
-    )
-      continue;
+    if (pareto.some((x) => dom(x, c))) continue;
     for (let i = pareto.length - 1; i >= 0; i--) {
-      const x = pareto[i];
-      if (
-        c.arrivalMin <= x.arrivalMin &&
-        c.transfers <= x.transfers &&
-        (c.arrivalMin < x.arrivalMin || c.transfers < x.transfers)
-      ) {
-        pareto.splice(i, 1);
-      }
+      if (dom(c, pareto[i])) pareto.splice(i, 1);
     }
     pareto.push(c);
   }
