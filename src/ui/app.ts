@@ -34,6 +34,15 @@ export async function bootstrap() {
   const showNetworkInput = document.getElementById('show-network') as HTMLInputElement;
   const instruction = document.getElementById('instruction') as HTMLElement;
   const resultContainer = document.getElementById('result-panel') as HTMLElement;
+  const disclaimerLink = document.getElementById('disclaimer-link') as HTMLAnchorElement;
+  const disclaimerDialog = document.getElementById('disclaimer-dialog') as HTMLDialogElement;
+  disclaimerLink.addEventListener('click', (e) => {
+    e.preventDefault();
+    disclaimerDialog.showModal();
+  });
+  disclaimerDialog.addEventListener('click', (e) => {
+    if (e.target === disclaimerDialog) disclaimerDialog.close();
+  });
 
   function setDateTimeToNow() {
     const n = new Date();

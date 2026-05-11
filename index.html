@@ -15,6 +15,12 @@
       <aside id="side-panel">
         <section id="search-panel">
           <h1>知立市ミニバス 乗換検索</h1>
+          <div class="unofficial-notice" role="alert">
+            <strong>⚠ 個人開発の非公式サービスです。</strong>
+            知立市・運行事業者とは関係ありません。最新・正確な情報は
+            <a href="https://www.city.chiryu.aichi.jp/soshiki/toshiseibi/toshiseibi/gyomu/1/1445358636807.html" target="_blank" rel="noopener">公式ページ</a>
+            をご確認ください。
+          </div>
           <p class="hint" id="instruction"><span class="origin-text">出発地</span>を地図上でクリックしてください</p>
           <div class="form-row">
             <label>出発日 <input type="date" id="search-date" /></label>
@@ -45,10 +51,25 @@
             データ提供：知立市「ミニバス」GTFS-JP
             <a href="https://creativecommons.org/licenses/by/2.1/jp/" target="_blank" rel="noopener">CC BY 2.1 JP</a>
             ／ 地図：© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a> contributors © <a href="https://carto.com/attributions" target="_blank" rel="noopener">CARTO</a>
+            ／ <a href="#" id="disclaimer-link">免責事項</a>
           </small>
         </footer>
       </aside>
     </div>
+    <dialog id="disclaimer-dialog" class="disclaimer-dialog">
+      <article>
+        <h2>免責事項</h2>
+        <ul>
+          <li>本アプリは個人が公開している非公式の検索ツールであり、知立市および運行事業者とは一切関係ありません。</li>
+          <li>表示する経路・時刻は公開GTFSデータをもとに自動計算しており、ダイヤ改正・運休・迂回・遅延など最新の運行情報が反映されない場合があります。</li>
+          <li>本アプリの情報を利用したことにより生じたいかなる損害についても、開発者は責任を負いません。</li>
+          <li>実際にご利用の際は、必ず<a href="https://www.city.chiryu.aichi.jp/soshiki/toshiseibi/toshiseibi/gyomu/1/1445358636807.html" target="_blank" rel="noopener">知立市ミニバス公式ページ</a>で最新の時刻表・運行情報をご確認ください。</li>
+        </ul>
+        <form method="dialog">
+          <button type="submit" aria-label="閉じる">閉じる</button>
+        </form>
+      </article>
+    </dialog>
     <script type="module" src="/src/main.ts"></script>
     <script defer src="https://static.cloudflareinsights.com/beacon.min.js" data-cf-beacon='{"token": "d4ded4ee0b5f4d5f92bfa83402f72fbe"}'></script>
   </body>
