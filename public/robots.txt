@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://wakodai.github.io/chiryu-bus-transit-app/sitemap.xml
