@@ -84,6 +84,26 @@ button:disabled { opacity: 0.5; cursor: not-allowed; }
   cursor: pointer;
 }
 .disclaimer-dialog button:hover { background: #1565c0; }
+
+.seo-content {
+  margin-top: 8px;
+  padding-top: 12px;
+  border-top: 1px solid #e0e0e0;
+  color: #555;
+  font-size: 0.8rem;
+  line-height: 1.6;
+}
+.seo-content h2 { font-size: 0.95rem; margin: 0 0 6px; color: #333; }
+.seo-content h3 { font-size: 0.85rem; margin: 12px 0 2px; color: #333; }
+.seo-content p { margin: 0 0 4px; }
+.seo-stop-list {
+  margin: 4px 0 0;
+  padding-left: 1.2em;
+  columns: 2;
+  column-gap: 16px;
+}
+.seo-stop-list li { break-inside: avoid; }
+
 @media (max-width: 720px) {
   #app { grid-template-columns: 1fr; grid-template-rows: 50vh 1fr; }
   #side-panel { border-left: none; border-top: 1px solid #ddd; }
